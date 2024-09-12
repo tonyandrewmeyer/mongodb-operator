@@ -8,13 +8,10 @@ from ops.testing import Harness
 
 from charm import MongodbOperatorCharm
 
-from .helpers import patch_network_get
-
 RELATION_NAME = "certificates"
 
 
 class TestMongoTLS(unittest.TestCase):
-    @patch_network_get(private_address="1.1.1.1")
     def setUp(self):
         self.harness = Harness(MongodbOperatorCharm)
         self.harness.begin()
@@ -23,7 +20,6 @@ class TestMongoTLS(unittest.TestCase):
         self.charm = self.harness.charm
         self.addCleanup(self.harness.cleanup)
 
-    @patch_network_get(private_address="1.1.1.1")
     def test_set_internal_tls_private_key(self):
         """Tests setting of TLS private key via the leader, ie both internal and external.
 
@@ -50,7 +46,6 @@ class TestMongoTLS(unittest.TestCase):
         self.verify_internal_rsa_csr(specific_rsa=True, expected_rsa=parsed_app_rsa_key)
         self.verify_external_rsa_csr()
 
-    @patch_network_get(private_address="1.1.1.1")
     def test_set_external_tls_private_key(self):
         """Tests setting of TLS private key in external certificate scenarios.
 
@@ -87,7 +82,6 @@ class TestMongoTLS(unittest.TestCase):
             specific_rsa=True, expected_rsa=None, specific_csr=True, expected_csr=None
         )
 
-    @patch_network_get(private_address="1.1.1.1")
     def test_tls_relation_joined_non_leader(self):
         """Test that non-leader units set only external certificates."""
         self.harness.set_leader(False)
@@ -98,7 +92,6 @@ class TestMongoTLS(unittest.TestCase):
         )
         self.verify_external_rsa_csr()
 
-    @patch_network_get(private_address="1.1.1.1")
     def test_tls_relation_joined_leader(self):
         """Test that leader units set both external and internal certificates."""
         self.relate_to_tls_certificates_operator()
@@ -106,7 +99,6 @@ class TestMongoTLS(unittest.TestCase):
         self.verify_external_rsa_csr()
 
     @patch("charm.MongodbOperatorCharm.restart_mongod_service")
-    @patch_network_get(private_address="1.1.1.1")
     def test_tls_relation_broken_non_leader(self, restart_mongod_service):
         """Test non-leader removes only external cert & chain."""
         # set initial certificate values
@@ -132,7 +124,6 @@ class TestMongoTLS(unittest.TestCase):
         restart_mongod_service.assert_called()
 
     @patch("charm.MongodbOperatorCharm.restart_mongod_service")
-    @patch_network_get(private_address="1.1.1.1")
     def test_tls_relation_broken_leader(self, restart_mongod_service):
         """Test leader removes both external and internal certificates."""
         # set initial certificate values
@@ -152,7 +143,6 @@ class TestMongoTLS(unittest.TestCase):
         # units should be restarted after updating TLS settings
         restart_mongod_service.assert_called()
 
-    @patch_network_get(private_address="1.1.1.1")
     def test_external_certificate_expiring(self):
         """Verifies that when an external certificate expires a csr is made."""
         # assume relation exists with a current certificate
@@ -170,7 +160,6 @@ class TestMongoTLS(unittest.TestCase):
         new_csr = self.harness.charm.get_secret("unit", "csr-secret")
         self.assertNotEqual(old_csr, new_csr)
 
-    @patch_network_get(private_address="1.1.1.1")
     def test_internal_certificate_expiring(self):
         """Verifies that when an internal certificate expires a csr is made."""
         # assume relation exists with a current certificate
@@ -194,7 +183,6 @@ class TestMongoTLS(unittest.TestCase):
         new_csr = self.harness.charm.get_secret("app", "csr-secret")
         self.assertNotEqual(old_csr, new_csr)
 
-    @patch_network_get(private_address="1.1.1.1")
     def test_unknown_certificate_expiring(self):
         """Verifies that when an unknown certificate expires nothing happens."""
         # assume relation exists with a current certificate
@@ -214,7 +202,6 @@ class TestMongoTLS(unittest.TestCase):
         self.assertEqual(old_app_csr, new_app_csr)
         self.assertEqual(old_unit_csr, new_unit_csr)
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongodbOperatorCharm.push_tls_certificate_to_workload")
     @patch("charm.MongodbOperatorCharm.restart_mongod_service")
     def test_external_certificate_available(self, restart_mongod_service, _):
@@ -242,7 +229,6 @@ class TestMongoTLS(unittest.TestCase):
 
         restart_mongod_service.assert_called()
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongodbOperatorCharm.push_tls_certificate_to_workload")
     @patch("charm.MongodbOperatorCharm.restart_mongod_service")
     def test_internal_certificate_available(self, restart_mongod_service, _):
@@ -270,7 +256,6 @@ class TestMongoTLS(unittest.TestCase):
 
         restart_mongod_service.assert_called()
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongodbOperatorCharm.push_tls_certificate_to_workload")
     @patch("charm.MongodbOperatorCharm.restart_mongod_service")
     def test_unknown_certificate_available(self, restart_mongod_service, _):

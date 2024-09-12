@@ -26,13 +26,10 @@ from ops.testing import Harness
 
 from charm import MongodbOperatorCharm
 
-from .helpers import patch_network_get
-
 RELATION_NAME = "s3-credentials"
 
 
 class TestMongoBackups(unittest.TestCase):
-    @patch_network_get(private_address="1.1.1.1")
     def setUp(self):
         self.harness = Harness(MongodbOperatorCharm)
         self.harness.begin()
@@ -260,7 +257,6 @@ class TestMongoBackups(unittest.TestCase):
 
         defer.assert_called()
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongodbOperatorCharm.has_backup_service")
     @patch("charm.MongoDBBackups._set_config_options")
     def test_s3_credentials_set_pbm_failure(self, _set_config_options, service):
@@ -284,7 +280,6 @@ class TestMongoBackups(unittest.TestCase):
 
         self.assertTrue(isinstance(self.harness.charm.unit.status, BlockedStatus))
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBBackups._set_config_options")
     @patch("charm.MongoDBBackups._resync_config_options")
     @patch("ops.framework.EventBase.defer")
@@ -312,7 +307,6 @@ class TestMongoBackups(unittest.TestCase):
         )
         self.assertTrue(isinstance(self.harness.charm.unit.status, BlockedStatus))
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBBackups._set_config_options")
     @patch("charm.MongoDBBackups._resync_config_options")
     @patch("ops.framework.EventBase.defer")
@@ -339,7 +333,6 @@ class TestMongoBackups(unittest.TestCase):
         defer.assert_called()
         self.assertTrue(isinstance(self.harness.charm.unit.status, WaitingStatus))
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBBackups._set_config_options")
     @patch("charm.MongoDBBackups._resync_config_options")
     @patch("ops.framework.EventBase.defer")
@@ -369,7 +362,6 @@ class TestMongoBackups(unittest.TestCase):
         defer.assert_called()
         self.assertTrue(isinstance(self.harness.charm.unit.status, WaitingStatus))
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBBackups._set_config_options")
     @patch("charm.MongoDBBackups._resync_config_options")
     @patch("ops.framework.EventBase.defer")

@@ -7,13 +7,10 @@ from ops.testing import Harness
 
 from charm import MongodbOperatorCharm
 
-from .helpers import patch_network_get
-
 RELATION_NAME = "s3-credentials"
 
 
 class TestConfigServerInterface(unittest.TestCase):
-    @patch_network_get(private_address="1.1.1.1")
     def setUp(self):
         self.harness = Harness(MongodbOperatorCharm)
         self.harness.begin()

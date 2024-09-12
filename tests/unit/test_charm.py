@@ -17,8 +17,6 @@ from tenacity import stop_after_attempt
 
 from charm import MongodbOperatorCharm, NotReadyError, subprocess
 
-from .helpers import patch_network_get
-
 REPO_NAME = "deb-https://repo.mongodb.org/apt/ubuntu-focal/mongodb-org/5.0"
 REPO_ENTRY = (
     "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/5.0 multiverse"
@@ -52,7 +50,6 @@ class TestCharm(unittest.TestCase):
         self.harness.set_leader(False)
 
     @patch("charm.MongodbOperatorCharm.get_secret")
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBConnection")
     @patch("charm.MongodbOperatorCharm._init_operator_user")
     @patch("charm.MongodbOperatorCharm._open_ports_tcp")
@@ -80,7 +77,6 @@ class TestCharm(unittest.TestCase):
         connection.return_value.__enter__.return_value.init_replset.assert_not_called()
         init_admin.assert_not_called()
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBConnection")
     @patch("charm.MongodbOperatorCharm._init_operator_user")
     @patch("charm.MongodbOperatorCharm._open_ports_tcp")
@@ -103,7 +99,6 @@ class TestCharm(unittest.TestCase):
         connection.return_value.__enter__.return_value.init_replset.assert_not_called()
         init_admin.assert_not_called()
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongodbOperatorCharm._open_ports_tcp")
     @patch("charm.MongodbOperatorCharm._initialise_replica_set")
     @patch("charm.snap.SnapCache")
@@ -136,7 +131,6 @@ class TestCharm(unittest.TestCase):
         connection.return_value.__enter__.return_value.init_replset.assert_not_called()
         init_admin.assert_not_called()
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongodbOperatorCharm._open_ports_tcp")
     @patch("charm.snap.SnapCache")
     @patch("charm.MongodbOperatorCharm.push_file_to_unit")
@@ -176,7 +170,6 @@ class TestCharm(unittest.TestCase):
                 self.harness.charm._open_ports_tcp([27017])
                 self.assertIn("failed opening port 27017", "".join(logs.output))
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.update_mongod_service")
     @patch("charm.snap.SnapCache")
     @patch("subprocess.check_call")
@@ -186,14 +179,13 @@ class TestCharm(unittest.TestCase):
         self.harness.charm.on.install.emit()
         self.assertTrue(isinstance(self.harness.charm.unit.status, BlockedStatus))
 
-    @patch_network_get(private_address="1.1.1.1")
     def test_unit_ips(self):
         rel_id = self.harness.charm.model.get_relation("database-peers").id
         self.harness.add_relation_unit(rel_id, "mongodb/1")
         self.harness.update_relation_data(rel_id, "mongodb/1", PEER_ADDR)
 
         resulting_ips = self.harness.charm._unit_ips
-        expected_ips = ["127.4.5.6", "1.1.1.1"]
+        expected_ips = ["127.4.5.6", "192.0.2.0"]
         self.assertEqual(resulting_ips, expected_ips)
 
     @patch("charm.MongoDBConnection")
@@ -204,7 +196,6 @@ class TestCharm(unittest.TestCase):
         self.harness.charm.on.database_peers_relation_joined.emit(relation=rel)
         connection.return_value.__enter__.assert_not_called()
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBConnection")
     @patch("charm.MongodbOperatorCharm._connect_mongodb_exporter")
     def test_mongodb_relation_joined_all_replicas_not_ready(self, _, connection):
@@ -218,7 +209,7 @@ class TestCharm(unittest.TestCase):
         self.harness.charm.app_peer_data["db_initialised"] = "True"
         connection.return_value.__enter__.return_value.is_ready = False
         connection.return_value.__enter__.return_value.get_replset_members.return_value = {
-            "1.1.1.1"
+            "192.0.2.0"
         }
 
         # simulate 2nd MongoDB unit
@@ -230,7 +221,6 @@ class TestCharm(unittest.TestCase):
         self.assertTrue(isinstance(self.harness.charm.unit.status, WaitingStatus))
         connection.return_value.__enter__.return_value.add_replset_member.assert_not_called()
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("ops.framework.EventBase.defer")
     @patch("charm.MongoDBConnection")
     @patch("charms.mongodb.v0.mongodb.MongoClient")
@@ -266,7 +256,6 @@ class TestCharm(unittest.TestCase):
 
                 defer.assert_called()
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("ops.framework.EventBase.defer")
     @patch("charm.MongoDBConnection")
     @patch("charm.MongodbOperatorCharm._connect_mongodb_exporter")
@@ -280,7 +269,7 @@ class TestCharm(unittest.TestCase):
         self.harness.set_leader(True)
         self.harness.charm.app_peer_data["db_initialised"] = "True"
         connection.return_value.__enter__.return_value.get_replset_members.return_value = {
-            "1.1.1.1"
+            "192.0.2.0"
         }
         rel = self.harness.charm.model.get_relation("database-peers")
 
@@ -298,7 +287,6 @@ class TestCharm(unittest.TestCase):
             connection.return_value.__enter__.return_value.add_replset_member.assert_called()
             defer.assert_called()
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongodbOperatorCharm._open_ports_tcp")
     @patch("charm.snap.SnapCache")
     @patch("charm.MongodbOperatorCharm.push_file_to_unit")
@@ -332,7 +320,6 @@ class TestCharm(unittest.TestCase):
             init_admin.assert_not_called()
             self.assertTrue(isinstance(self.harness.charm.unit.status, WaitingStatus))
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charms.mongodb.v1.helpers.MongoDBConnection")
     @patch("charm.MongoDBConnection")
     @patch("charm.MongoDBBackups.get_pbm_status")
@@ -367,7 +354,6 @@ class TestCharm(unittest.TestCase):
                 self.harness.charm.on.update_status.emit()
                 self.assertEqual(self.harness.charm.unit.status, mongodb_status)
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charms.mongodb.v1.helpers.MongoDBConnection")
     @patch("charm.MongoDBConnection")
     @patch("charm.MongoDBBackups.get_pbm_status")
@@ -397,7 +383,6 @@ class TestCharm(unittest.TestCase):
                 self.harness.charm.on.update_status.emit()
                 self.assertEqual(self.harness.charm.unit.status, pbm_status)
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charms.mongodb.v1.helpers.MongoDBConnection")
     @patch("charm.MongoDBConnection")
     @patch("charm.MongoDBBackups.get_pbm_status")
@@ -419,7 +404,6 @@ class TestCharm(unittest.TestCase):
         self.harness.charm.on.update_status.emit()
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus("mongodb"))
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charms.mongodb.v1.helpers.MongoDBConnection")
     @patch("charm.MongoDBConnection")
     @patch("charm.build_unit_status")
@@ -439,7 +423,6 @@ class TestCharm(unittest.TestCase):
         self.harness.charm.on.update_status.emit()
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus("mongodb"))
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charms.mongodb.v1.helpers.MongoDBConnection")
     @patch("charm.MongoDBConnection")
     @patch("charm.MongoDBBackups.get_pbm_status")
@@ -454,12 +437,11 @@ class TestCharm(unittest.TestCase):
         self.harness.set_leader(False)
         connection.return_value.__enter__.return_value.is_ready = True
         status_connection.return_value.__enter__.return_value.get_replset_status.return_value = {
-            "1.1.1.1": "PRIMARY"
+            "192.0.2.0": "PRIMARY"
         }
         self.harness.charm.on.update_status.emit()
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus("Primary"))
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charms.mongodb.v1.helpers.MongoDBConnection")
     @patch("charm.MongoDBConnection")
     @patch("charm.MongoDBBackups.get_pbm_status")
@@ -474,12 +456,11 @@ class TestCharm(unittest.TestCase):
         self.harness.set_leader(False)
         connection.return_value.__enter__.return_value.is_ready = True
         status_connection.return_value.__enter__.return_value.get_replset_status.return_value = {
-            "1.1.1.1": "SECONDARY"
+            "192.0.2.0": "SECONDARY"
         }
         self.harness.charm.on.update_status.emit()
         self.assertEqual(self.harness.charm.unit.status, ActiveStatus(""))
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charms.mongodb.v1.helpers.MongoDBConnection")
     @patch("charm.MongoDBConnection")
     @patch("charm.MongoDBBackups.get_pbm_status")
@@ -500,7 +481,7 @@ class TestCharm(unittest.TestCase):
 
         # Case 2: Unit is being removed from replica set
         status_connection.return_value.__enter__.return_value.get_replset_status.return_value = {
-            "1.1.1.1": "REMOVED"
+            "192.0.2.0": "REMOVED"
         }
         self.harness.charm.on.update_status.emit()
         self.assertEqual(self.harness.charm.unit.status, WaitingStatus("Member is removing..."))
@@ -508,20 +489,19 @@ class TestCharm(unittest.TestCase):
         # Case 3: Member is syncing to replica set
         for syncing_status in ["STARTUP", "STARTUP2", "ROLLBACK", "RECOVERING"]:
             status_connection.return_value.__enter__.return_value.get_replset_status.return_value = {
-                "1.1.1.1": syncing_status
+                "192.0.2.0": syncing_status
             }
             self.harness.charm.on.update_status.emit()
             self.assertEqual(self.harness.charm.unit.status, WaitingStatus("Member is syncing..."))
 
         # Case 4: Unknown status
         status_connection.return_value.__enter__.return_value.get_replset_status.return_value = {
-            "1.1.1.1": "unknown"
+            "192.0.2.0": "unknown"
         }
         self.harness.charm.on.update_status.emit()
         self.assertEqual(self.harness.charm.unit.status, BlockedStatus("unknown"))
 
     @patch("charm.MongodbOperatorCharm.get_secret")
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBConnection")
     def test_update_status_not_ready(self, connection, get_secret):
         """Tests that if mongod is not running on this unit it restarts it."""
@@ -535,18 +515,16 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("charm.MongodbOperatorCharm.get_secret")
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBConnection")
     def test_get_primary_current_unit_primary(self, connection, get_secret):
         """Tests get primary outputs correct primary when called on a primary replica."""
         mock_event = mock.Mock()
-        connection.return_value.__enter__.return_value.primary.return_value = "1.1.1.1"
+        connection.return_value.__enter__.return_value.primary.return_value = "192.0.2.0"
         get_secret.return_value = "pass123"
         self.harness.charm._on_get_primary_action(mock_event)
         mock_event.set_results.assert_called_with({"replica-set-primary": "mongodb/0"})
 
     @patch("charm.MongodbOperatorCharm.get_secret")
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBConnection")
     def test_get_primary_peer_unit_primary(self, connection, get_secret):
         """Tests get primary outputs correct primary when called on a secondary replica."""
@@ -565,7 +543,6 @@ class TestCharm(unittest.TestCase):
         mock_event.set_results.assert_called_with({"replica-set-primary": "mongodb/1"})
 
     @patch("charm.MongodbOperatorCharm.get_secret")
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBConnection")
     def test_primary_no_primary(self, connection, get_secret):
         """Test that that the primary property can handle the case when there is no primary.
@@ -586,7 +563,6 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(primary, None)
 
     @patch("charm.MongodbOperatorCharm.get_secret")
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBConnection")
     def test_primary_failure(self, connection, get_secret):
         """Tests that when getting the primary fails that no replica is reported as primary."""
@@ -596,7 +572,6 @@ class TestCharm(unittest.TestCase):
             connection.return_value.__enter__.return_value.primary.side_effect = exception
             self.assertEqual(self.harness.charm._primary, None)
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBConnection")
     @patch("charm.stop_after_attempt")
     def test_storage_detaching_failure_does_not_defer(self, retry_stop, connection):
@@ -618,14 +593,13 @@ class TestCharm(unittest.TestCase):
             event.defer.assert_not_called()
 
     @patch("charm.MongodbOperatorCharm.get_secret")
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongodbOperatorCharm._unit_ips")
     @patch("charm.MongoDBConnection")
     def test_process_unremoved_units_handles_errors(self, connection, _unit_ips, get_secret):
         """Test failures in process_unremoved_units are handled and not raised."""
         get_secret.return_value = "pass123"
         connection.return_value.__enter__.return_value.get_replset_members.return_value = {
-            "1.1.1.1",
+            "192.0.2.0",
             "2.2.2.2",
         }
         self.harness.charm._unit_ips = ["2.2.2.2"]
@@ -637,7 +611,6 @@ class TestCharm(unittest.TestCase):
             self.harness.charm.process_unremoved_units(mock.Mock())
             connection.return_value.__enter__.return_value.remove_replset_member.assert_called()
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBConfiguration")
     @patch("charm.subprocess.run")
     def test_start_init_user_after_second_call(self, run, config):
@@ -654,7 +627,6 @@ class TestCharm(unittest.TestCase):
         self.harness.charm._init_operator_user()
         run.assert_called_once()
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBConnection")
     @patch("charm.MongoDBBackups.get_pbm_status")
     def test_set_password(self, pbm_status, connection):
@@ -670,7 +642,6 @@ class TestCharm(unittest.TestCase):
         # verify app data is updated and results are reported to user
         self.assertNotEqual(original_password, new_password)
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBConnection")
     @patch("charm.MongoDBBackups.get_pbm_status")
     def test_set_password_provided(self, pbm_status, connection):
@@ -688,7 +659,6 @@ class TestCharm(unittest.TestCase):
             {"password": "canonical123", "secret-id": mock.ANY}
         )
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBConnection")
     @patch("charm.MongoDBBackups.get_pbm_status")
     def test_set_password_failure(self, pbm_status, connection):
@@ -826,7 +796,6 @@ class TestCharm(unittest.TestCase):
 
         connect_exporter.assert_not_called()
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBConnection")
     @patch("charm.MongodbOperatorCharm._connect_mongodb_exporter")
     def test_connect_to_mongo_exporter_on_set_password(self, connect_exporter, connection):
@@ -841,7 +810,6 @@ class TestCharm(unittest.TestCase):
         self.harness.charm._on_set_password(action_event)
         connect_exporter.assert_called()
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBBackups.get_pbm_status")
     @patch("charm.MongodbOperatorCharm.has_backup_service")
     @patch("charm.MongoDBConnection")
@@ -874,7 +842,6 @@ class TestCharm(unittest.TestCase):
         assert "password" in args_pw
         assert args_pw["password"] == pw
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBBackups.get_pbm_status")
     @patch("charm.MongodbOperatorCharm.has_backup_service")
     @patch("charm.MongoDBConnection")
@@ -935,7 +902,6 @@ class TestCharm(unittest.TestCase):
         assert "password" in args_pw
         assert args_pw["password"]
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.MongoDBBackups.get_pbm_status")
     def test_set_backup_password_pbm_busy(self, pbm_status):
         """Tests changes to passwords fail when pbm is restoring/backing up."""
